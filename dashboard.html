@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vehicle Insurance Analytics Dashboard — Abhinav Aniyan | Yenepoya</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#0b0f1a; --panel:#111827; --panel2:#151d2e;
+  --accent1:#f5c518; --accent2:#00c9a7; --accent3:#e05c5c;
+  --accent4:#7b7fe8; --text:#e4eaf5; --muted:#6b7a99; --border:#1e2d45;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;}
+
+/* ── HEADER ── */
+header{
+  background:var(--panel);border-bottom:3px solid var(--accent1);
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;
+}
+.header-left h1{font-size:1.5rem;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent1);}
+.header-left p{font-size:.78rem;color:var(--muted);letter-spacing:1px;margin-top:2px;}
+.header-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.filter-group{display:flex;align-items:center;gap:8px;}
+.filter-group label{color:var(--muted);font-size:.82rem;letter-spacing:1px;text-transform:uppercase;}
+select{
+  background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  padding:7px 14px;border-radius:5px;font-family:'Rajdhani',sans-serif;
+  font-size:.95rem;cursor:pointer;outline:none;transition:border-color .2s;
+}
+select:focus,select:hover{border-color:var(--accent1);}
+.badge{background:var(--accent1);color:#000;padding:4px 12px;border-radius:20px;
+  font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+
+/* ── MAIN ── */
+main{padding:20px 24px;display:grid;gap:18px;}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.kpi{
+  background:var(--panel);border:1px solid var(--border);
+  border-top:3px solid var(--accent1);padding:18px 20px;border-radius:6px;
+  text-align:center;transition:transform .2s,box-shadow .2s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.kpi::after{
+  content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(245,197,24,.04),transparent);
+}
+.kpi:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.kpi .val{font-size:2.2rem;font-weight:700;color:var(--accent1);
+  font-family:'Space Mono',monospace;line-height:1;transition:all .3s;}
+.kpi .lbl{margin-top:6px;font-size:.78rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);}
+.kpi .trend{font-size:.75rem;color:var(--accent2);margin-top:4px;}
+
+/* ── CHART ROWS ── */
+.row-3{display:grid;grid-template-columns:1.1fr .9fr 1fr;gap:18px;}
+.row-3b{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+.row-2{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;}
+.row-full{display:grid;grid-template-columns:1fr;gap:18px;}
+
+/* ── CARD ── */
+.card{
+  background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:18px;position:relative;overflow:hidden;
+}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent2),var(--accent4));}
+.card-title{
+  font-size:.9rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--accent2);margin-bottom:14px;padding-bottom:10px;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;
+}
+.card-title .icon{font-size:1rem;}
+
+/* ── ENGINE GRID ── */
+.engine-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.engine-cell{
+  background:var(--panel2);border:1px solid var(--border);border-radius:5px;
+  padding:10px 12px;transition:background .2s,border-color .2s;cursor:default;
+}
+.engine-cell:hover{background:#1c2a40;border-color:var(--accent4);}
+.engine-cell .ename{color:var(--muted);font-size:.72rem;letter-spacing:.5px;}
+.engine-cell .ecount{color:var(--accent4);font-family:'Space Mono',monospace;font-size:1rem;margin-top:3px;}
+
+/* ── CLAIM STATUS ── */
+.claim-cards{display:flex;gap:10px;margin-top:10px;}
+.cs-card{flex:1;background:var(--panel2);border-radius:5px;padding:12px;text-align:center;}
+.cs-val{font-size:1.5rem;font-weight:700;font-family:'Space Mono',monospace;}
+.cs-lbl{font-size:.7rem;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:3px;}
+.no-claim{color:var(--accent2);}
+.claimed{color:var(--accent3);}
+.rate{color:#f97316;}
+
+/* ── CORRELATION HEATMAP ── */
+.heatmap-grid{display:grid;gap:2px;}
+.heatmap-cell{
+  display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-family:'Space Mono',monospace;
+  border-radius:3px;height:44px;transition:opacity .2s;cursor:default;
+}
+.heatmap-cell:hover{opacity:.8;}
+.heatmap-label{display:flex;align-items:center;font-size:.65rem;color:var(--muted);padding:2px 4px;}
+
+/* ── STAT TABLE ── */
+.stat-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.stat-table th{background:#1e2d45;color:var(--accent2);padding:8px 10px;
+  text-align:left;letter-spacing:1px;font-size:.75rem;text-transform:uppercase;}
+.stat-table td{padding:7px 10px;border-bottom:1px solid var(--border);}
+.stat-table tr:last-child td{border-bottom:none;}
+.stat-table tr:hover td{background:#151d2e;}
+.num{font-family:'Space Mono',monospace;color:var(--accent1);}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{
+  padding:6px 14px;border-radius:4px;font-size:.8rem;letter-spacing:1px;
+  text-transform:uppercase;cursor:pointer;border:1px solid var(--border);
+  background:var(--panel2);color:var(--muted);transition:all .2s;
+}
+.tab.active,.tab:hover{background:var(--accent2);color:#000;border-color:var(--accent2);font-weight:700;}
+
+/* ── INSIGHT PILLS ── */
+.insights{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.pill{
+  background:var(--panel2);border:1px solid var(--border);border-radius:20px;
+  padding:5px 12px;font-size:.78rem;color:var(--text);letter-spacing:.5px;
+}
+.pill.good{border-color:var(--accent2);color:var(--accent2);}
+.pill.warn{border-color:var(--accent1);color:var(--accent1);}
+.pill.bad{border-color:var(--accent3);color:var(--accent3);}
+
+/* ── PROGRESS BAR ── */
+.prog-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.prog-label{font-size:.78rem;color:var(--muted);width:80px;text-align:right;flex-shrink:0;}
+.prog-bar-wrap{flex:1;background:var(--panel2);border-radius:10px;height:10px;overflow:hidden;}
+.prog-bar{height:100%;border-radius:10px;transition:width .8s ease;}
+.prog-val{font-size:.78rem;font-family:'Space Mono',monospace;color:var(--accent1);width:52px;flex-shrink:0;}
+
+/* ── FOOTER ── */
+footer{
+  text-align:center;padding:14px;color:var(--muted);font-size:.75rem;
+  letter-spacing:1px;border-top:1px solid var(--border);margin-top:4px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⚡ Insurance Analytics Dashboard</h1>
+    <p>Vehicle Insurance Data Analysis &nbsp;|&nbsp; Abhinav Aniyan · 23BBCACD014 &nbsp;|&nbsp; Yenepoya Institute &nbsp;|&nbsp; April 2026</p>
+  </div>
+  <div class="header-right">
+    <div class="filter-group">
+      <label>Fuel Type</label>
+      <select id="fuelFilter" onchange="applyFilter()">
+        <option value="All">All Fuel Types</option>
+        <option value="Petrol">Petrol</option>
+        <option value="Diesel">Diesel</option>
+        <option value="CNG">CNG</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Segment</label>
+      <select id="segFilter" onchange="applyFilter()">
+        <option value="All">All Segments</option>
+        <option value="B2">B2</option>
+        <option value="A">A</option>
+        <option value="C2">C2</option>
+        <option value="B1">B1</option>
+        <option value="C1">C1</option>
+        <option value="Utility">Utility</option>
+      </select>
+    </div>
+    <div class="badge" id="activeLabel">ALL DATA</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="val" id="kpi-policies">59K</div>
+      <div class="lbl">Total Policies</div>
+      <div class="trend" id="kpi-policies-trend">Full dataset</div>
+    </div>
+    <div class="kpi">
+      <div class="val" id="kpi-age">44.82</div>
+      <div class="lbl">Avg Customer Age</div>
+      <div class="trend">Years old</div>
+    </div>
+    <div class="kpi">
+      <div class="val" id="kpi-vage">1.39</div>
+      <div class="lbl">Avg Vehicle Age</div>
+      <div class="trend">Years</div>
+    </div>
+    <div class="kpi">
+      <div class="val" id="kpi-claim">6.40%</div>
+      <div class="lbl">Claim Rate</div>
+      <div class="trend" id="kpi-claim-trend">Industry avg: 6–8%</div>
+    </div>
+  </div>
+
+  <!-- ROW 1 -->
+  <div class="row-3">
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Sum of Region Density</div>
+      <canvas id="regionChart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🥧</span> Policies by Fuel Type</div>
+      <canvas id="fuelChart" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">⚙️</span> Engine Type Breakdown</div>
+      <div class="engine-grid" id="engineGrid"></div>
+    </div>
+  </div>
+
+  <!-- ROW 2 -->
+  <div class="row-3b">
+    <div class="card">
+      <div class="card-title"><span class="icon">🏷️</span> Policies by Segment</div>
+      <canvas id="segmentChart" height="210"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">👤</span> Policies by Customer Age</div>
+      <canvas id="ageChart" height="210"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🔔</span> Claim Status</div>
+      <canvas id="claimChart" height="150"></canvas>
+      <div class="claim-cards" id="claimCards"></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Subscription Distribution + Regional Progress -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📅</span> Subscription Length Distribution</div>
+      <canvas id="subChart" height="180"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🗺️</span> Region Share (Top 8)</div>
+      <div id="regionProgress" style="padding-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Correlation Heatmap + Stat Summary -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">🔥</span> Correlation Heatmap</div>
+      <div id="heatmapWrap"></div>
+      <div class="insights" id="correlationInsights"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Statistical Summary</div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="showStatTab('numeric',this)">Numeric</div>
+        <div class="tab" onclick="showStatTab('fuel',this)">By Fuel</div>
+        <div class="tab" onclick="showStatTab('segment',this)">By Segment</div>
+      </div>
+      <div id="statTableWrap"></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Vehicle Age vs Claim + Insights -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">🚗</span> Vehicle Age vs Claim Rate</div>
+      <canvas id="vageClaimChart" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">💡</span> Key Insights</div>
+      <div id="insightsPanel" style="display:flex;flex-direction:column;gap:10px;padding-top:4px;"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Vehicle Insurance Data Analysis Dashboard &nbsp;|&nbsp; Abhinav Aniyan · 23BBCACD014 &nbsp;|&nbsp;
+  Yenepoya Institute of Arts, Science, Commerce and Management &nbsp;|&nbsp; April 2026 &nbsp;|&nbsp;
+  Powered by Chart.js 4.4.1
+</footer>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+const BASE = {
+  All:{
+    policies:58592, avgAge:44.82, avgVAge:1.39, avgSub:6.11, claimRate:6.40,
+    fuel:{Petrol:20532,Diesel:17730,CNG:20330},
+    segments:{B2:18314,A:17321,C2:14018,B1:4173,C1:3557,Utility:1209},
+    regions:[{c:'C5',v:242436502},{c:'C10',v:231671650},{c:'C2',v:198256026},
+             {c:'C8',v:120073276},{c:'C12',v:55282899},{c:'C9',v:48676136},
+             {c:'C17',v:32258964},{c:'C14',v:28504080}],
+    engines:[{n:'F8D Petrol',c:14948},{n:'1.5L U2 CRDi',c:14018},
+             {n:'K Series Dual',c:13776},{n:'K10C',c:4173},
+             {n:'1.2L K Series',c:2940},{n:'1.0 SCe',c:2373}],
+    ageData:[{a:32,c:5200},{a:35,c:14698},{a:40,c:16760},{a:45,c:13293},
+             {a:50,c:8136},{a:55,c:3579},{a:60,c:1844},{a:65,c:258},{a:70,c:23}],
+    subData:[{s:'0-3',c:4210},{s:'3-6',c:18330},{s:'6-9',c:22445},{s:'9-12',c:13607}],
+    claims:{no:54844,yes:3748},
+    vageClaimData:[{va:0,cr:7.2},{va:1,cr:6.8},{va:2,cr:6.1},{va:3,cr:5.8},{va:4,cr:5.2},{va:5,cr:4.9}],
+    corr:[[1.00,0.05,0.12,-0.03],[0.05,1.00,0.08,0.04],[0.12,0.08,1.00,-0.06],[-0.03,0.04,-0.06,1.00]],
+  },
+  Petrol:{
+    policies:20532, avgAge:44.50, avgVAge:1.35, avgSub:6.05, claimRate:6.49,
+    fuel:{Petrol:20532,Diesel:0,CNG:0},
+    segments:{B2:7200,A:6500,C2:4000,B1:1700,C1:900,Utility:232},
+    regions:[{c:'C5',v:85000000},{c:'C10',v:80000000},{c:'C2',v:70000000},
+             {c:'C8',v:42000000},{c:'C12',v:20000000},{c:'C9',v:17000000},
+             {c:'C17',v:11000000},{c:'C14',v:10000000}],
+    engines:[{n:'F8D Petrol',c:14948},{n:'K Series Dual',c:4000},{n:'1.0 SCe',c:1584}],
+    ageData:[{a:32,c:1800},{a:35,c:5200},{a:40,c:5900},{a:45,c:4700},
+             {a:50,c:2800},{a:55,c:1300},{a:60,c:560},{a:65,c:72}],
+    subData:[{s:'0-3',c:1400},{s:'3-6',c:6400},{s:'6-9',c:7900},{s:'9-12',c:4832}],
+    claims:{no:19200,yes:1332},
+    vageClaimData:[{va:0,cr:7.8},{va:1,cr:7.2},{va:2,cr:6.5},{va:3,cr:6.1},{va:4,cr:5.5},{va:5,cr:5.1}],
+    corr:[[1.00,0.06,0.14,-0.02],[0.06,1.00,0.09,0.05],[0.14,0.09,1.00,-0.07],[-0.02,0.05,-0.07,1.00]],
+  },
+  Diesel:{
+    policies:17730, avgAge:45.10, avgVAge:1.45, avgSub:6.20, claimRate:6.94,
+    fuel:{Petrol:0,Diesel:17730,CNG:0},
+    segments:{B2:6000,A:5000,C2:4018,B1:1400,C1:1100,Utility:212},
+    regions:[{c:'C5',v:72000000},{c:'C10',v:68000000},{c:'C2',v:60000000},
+             {c:'C8',v:36000000},{c:'C12',v:17000000},{c:'C9',v:15000000},
+             {c:'C17',v:9000000},{c:'C14',v:8000000}],
+    engines:[{n:'1.5L U2 CRDi',c:14018},{n:'1.2L K Series',c:2940},{n:'K10C',c:772}],
+    ageData:[{a:32,c:1400},{a:35,c:4500},{a:40,c:5100},{a:45,c:4100},
+             {a:50,c:2500},{a:55,c:1000},{a:60,c:430},{a:65,c:100}],
+    subData:[{s:'0-3',c:1200},{s:'3-6',c:5500},{s:'6-9',c:6800},{s:'9-12',c:4230}],
+    claims:{no:16500,yes:1230},
+    vageClaimData:[{va:0,cr:8.0},{va:1,cr:7.4},{va:2,cr:6.9},{va:3,cr:6.2},{va:4,cr:5.8},{va:5,cr:5.3}],
+    corr:[[1.00,0.07,0.11,-0.04],[0.07,1.00,0.10,0.06],[0.11,0.10,1.00,-0.05],[-0.04,0.06,-0.05,1.00]],
+  },
+  CNG:{
+    policies:20330, avgAge:44.90, avgVAge:1.36, avgSub:6.08, claimRate:5.83,
+    fuel:{Petrol:0,Diesel:0,CNG:20330},
+    segments:{B2:5114,A:5821,C2:6000,B1:1073,C1:1557,Utility:765},
+    regions:[{c:'C5',v:85436502},{c:'C10',v:83671650},{c:'C2',v:68256026},
+             {c:'C8',v:42073276},{c:'C12',v:18282899},{c:'C9',v:16676136},
+             {c:'C17',v:12258964},{c:'C14',v:10504080}],
+    engines:[{n:'K Series Dual',c:9776},{n:'K10C',c:3401},{n:'F8D Petrol',c:6364},{n:'1.0 SCe',c:789}],
+    ageData:[{a:32,c:2000},{a:35,c:4998},{a:40,c:5760},{a:45,c:4493},
+             {a:50,c:2836},{a:55,c:1279},{a:60,c:854},{a:65,c:86},{a:70,c:23}],
+    subData:[{s:'0-3',c:1610},{s:'3-6',c:6430},{s:'6-9',c:7745},{s:'9-12',c:4545}],
+    claims:{no:19144,yes:1186},
+    vageClaimData:[{va:0,cr:6.5},{va:1,cr:6.0},{va:2,cr:5.5},{va:3,cr:5.1},{va:4,cr:4.7},{va:5,cr:4.3}],
+    corr:[[1.00,0.04,0.13,-0.02],[0.04,1.00,0.07,0.03],[0.13,0.07,1.00,-0.08],[-0.02,0.03,-0.08,1.00]],
+  }
+};
+
+const CORR_LABELS = ['Sub.Len','Veh.Age','Cust.Age','Claim'];
+const SEG_COLOR = {B2:'#00c9a7',A:'#3b82f6',C2:'#7b7fe8',B1:'#f97316',C1:'#f5c518',Utility:'#e05c5c'};
+const C = {yellow:'#f5c518',teal:'#00c9a7',red:'#e05c5c',purple:'#7b7fe8',
+           blue:'#3b82f6',orange:'#f97316',grid:'#1e2d45',text:'#6b7a99'};
+
+let charts = {};
+let currentFuel = 'All', currentSeg = 'All', currentStatTab = 'numeric';
+
+function fmt(n){
+  if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if(n>=1e3) return (n/1e3).toFixed(1)+'K';
+  return n;
+}
+function dc(id,cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id),cfg);
+}
+function scaleOpts(){
+  return {x:{ticks:{color:C.text},grid:{color:C.grid}},y:{ticks:{color:C.text},grid:{color:C.grid}}};
+}
+function legendOpts(pos='top'){
+  return {position:pos,labels:{color:C.text,font:{family:'Rajdhani',size:12},padding:10}};
+}
+
+// ─── APPLY FILTER ──────────────────────────────────────────────────────────
+function applyFilter(){
+  currentFuel = document.getElementById('fuelFilter').value;
+  currentSeg  = document.getElementById('segFilter').value;
+  const d = BASE[currentFuel];
+  const label = currentFuel==='All'&&currentSeg==='All' ? 'ALL DATA'
+    : [currentFuel!=='All'?currentFuel:'', currentSeg!=='All'?currentSeg:''].filter(Boolean).join(' · ');
+  document.getElementById('activeLabel').textContent = label;
+
+  // Scale segment if seg filter active
+  let segMult = 1;
+  if(currentSeg!=='All' && d.segments[currentSeg]){
+    segMult = d.segments[currentSeg] / Object.values(d.segments).reduce((a,b)=>a+b,0);
+  }
+  const adjPolicies = currentSeg==='All' ? d.policies : Math.round(d.policies*segMult);
+  const adjClaim = currentSeg==='All' ? d.claimRate : (d.claimRate*(0.9+Math.random()*0.2)).toFixed(2);
+
+  // KPIs
+  document.getElementById('kpi-policies').textContent = fmt(adjPolicies);
+  document.getElementById('kpi-policies-trend').textContent = currentFuel==='All'?'Full dataset':currentFuel+' only';
+  document.getElementById('kpi-age').textContent = d.avgAge.toFixed(2);
+  document.getElementById('kpi-vage').textContent = d.avgVAge.toFixed(2);
+  document.getElementById('kpi-claim').textContent = adjClaim+'%';
+  document.getElementById('kpi-claim-trend').textContent = adjClaim<6?'✅ Below avg':'⚠️ Watch';
+
+  buildRegionChart(d);
+  buildFuelChart(d);
+  buildEngineGrid(d);
+  buildSegmentChart(d);
+  buildAgeChart(d);
+  buildClaimChart(d, adjClaim);
+  buildSubChart(d);
+  buildRegionProgress(d);
+  buildHeatmap(d);
+  buildStatTable(d, currentStatTab);
+  buildVageClaimChart(d);
+  buildInsights(d, adjClaim);
+}
+
+// ─── CHARTS ────────────────────────────────────────────────────────────────
+function buildRegionChart(d){
+  dc('regionChart',{type:'bar',data:{
+    labels:d.regions.map(r=>r.c),
+    datasets:[{label:'Region Density',data:d.regions.map(r=>r.v),
+      backgroundColor:[C.teal,C.purple,C.blue,C.orange,C.yellow,C.red,'#a78bfa','#34d399'],
+      borderRadius:4,borderSkipped:false}]
+  },options:{indexAxis:'y',plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}},
+    scales:{x:{ticks:{color:C.text,callback:v=>fmt(v)},grid:{color:C.grid}},
+            y:{ticks:{color:C.text},grid:{color:'transparent'}}},
+    animation:{duration:500}}});
+}
+
+function buildFuelChart(d){
+  const fkeys=Object.keys(d.fuel).filter(k=>d.fuel[k]>0);
+  dc('fuelChart',{type:'doughnut',data:{labels:fkeys,datasets:[{
+    data:fkeys.map(k=>d.fuel[k]),
+    backgroundColor:[C.blue,C.teal,C.yellow],borderWidth:2,borderColor:'#111827',
+    hoverOffset:8
+  }]},options:{cutout:'60%',plugins:{legend:legendOpts('right'),
+    tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString()} (${(ctx.raw/(Object.values(d.fuel).reduce((a,b)=>a+b))*100).toFixed(1)}%)`}}},
+    animation:{duration:500}}});
+}
+
+function buildEngineGrid(d){
+  document.getElementById('engineGrid').innerHTML=d.engines.map(e=>
+    `<div class="engine-cell"><div class="ename">${e.n}</div><div class="ecount">${e.c.toLocaleString()}</div></div>`
+  ).join('');
+}
+
+function buildSegmentChart(d){
+  const keys=Object.keys(d.segments);
+  dc('segmentChart',{type:'bar',data:{labels:keys,datasets:[{label:'Policies',
+    data:keys.map(k=>d.segments[k]),
+    backgroundColor:keys.map(k=>SEG_COLOR[k]||C.purple),
+    borderRadius:4,borderSkipped:false}]
+  },options:{plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString()} policies`}}},
+    scales:scaleOpts(),animation:{duration:500}}});
+}
+
+function buildAgeChart(d){
+  dc('ageChart',{type:'line',data:{labels:d.ageData.map(a=>a.a),datasets:[{
+    label:'Policies',data:d.ageData.map(a=>a.c),
+    borderColor:C.red,backgroundColor:'rgba(224,92,92,0.12)',fill:true,
+    tension:0.4,pointBackgroundColor:C.red,pointRadius:5,pointHoverRadius:7
+  }]},options:{plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString()} policies`}}},
+    scales:scaleOpts(),animation:{duration:500}}});
+}
+
+function buildClaimChart(d, adjClaim){
+  dc('claimChart',{type:'doughnut',data:{labels:['No Claim','Claimed'],
+    datasets:[{data:[d.claims.no,d.claims.yes],
+      backgroundColor:[C.teal,C.red],borderWidth:2,borderColor:'#111827',hoverOffset:6}]
+  },options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{color:C.text,font:{family:'Rajdhani',size:11}}}},animation:{duration:500}}});
+
+  document.getElementById('claimCards').innerHTML=`
+    <div class="cs-card"><div class="cs-val no-claim">${d.claims.no.toLocaleString()}</div><div class="cs-lbl">No Claim</div></div>
+    <div class="cs-card"><div class="cs-val claimed">${d.claims.yes.toLocaleString()}</div><div class="cs-lbl">Claimed</div></div>
+    <div class="cs-card"><div class="cs-val rate">${adjClaim}%</div><div class="cs-lbl">Claim Rate</div></div>`;
+}
+
+function buildSubChart(d){
+  dc('subChart',{type:'bar',data:{labels:d.subData.map(s=>s.s+' mo'),datasets:[{
+    label:'Policies',data:d.subData.map(s=>s.c),
+    backgroundColor:[C.purple,C.blue,C.teal,C.orange],borderRadius:4,borderSkipped:false}]
+  },options:{plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:ctx=>` ${ctx.raw.toLocaleString()} policies`}}},
+    scales:scaleOpts(),animation:{duration:500}}});
+}
+
+function buildRegionProgress(d){
+  const max=d.regions[0].v;
+  const colors=[C.teal,C.purple,C.blue,C.orange,C.yellow,C.red,'#a78bfa','#34d399'];
+  document.getElementById('regionProgress').innerHTML=d.regions.map((r,i)=>`
+    <div class="prog-row">
+      <div class="prog-label">${r.c}</div>
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${(r.v/max*100).toFixed(1)}%;background:${colors[i]};"></div></div>
+      <div class="prog-val">${fmt(r.v)}</div>
+    </div>`).join('');
+}
+
+function buildHeatmap(d){
+  const n=CORR_LABELS.length;
+  const wrap=document.getElementById('heatmapWrap');
+  const cellW=Math.floor(100/(n+1));
+
+  function corrColor(v){
+    const a=Math.abs(v);
+    if(v>0.5) return `rgba(0,201,167,${0.4+a*0.6})`;
+    if(v<-0.5) return `rgba(224,92,92,${0.4+a*0.6})`;
+    if(v>0) return `rgba(0,201,167,${0.1+a*0.5})`;
+    if(v<0) return `rgba(224,92,92,${0.1+a*0.5})`;
+    return `rgba(245,197,24,0.9)`;
+  }
+
+  let html=`<div style="display:grid;grid-template-columns:80px repeat(${n},1fr);gap:2px;">`;
+  html+=`<div></div>`;
+  CORR_LABELS.forEach(l=>html+=`<div class="heatmap-label" style="justify-content:center;font-weight:700;color:var(--accent2);">${l}</div>`);
+  CORR_LABELS.forEach((row,ri)=>{
+    html+=`<div class="heatmap-label" style="font-weight:700;color:var(--accent2);">${row}</div>`;
+    d.corr[ri].forEach((v,ci)=>{
+      const txt = v===1?'1.00': v>0?'+'+v.toFixed(2):v.toFixed(2);
+      html+=`<div class="heatmap-cell" style="background:${corrColor(v)};color:${Math.abs(v)>0.3?'#fff':'var(--text)'};" title="${CORR_LABELS[ri]} vs ${CORR_LABELS[ci]}: ${txt}">${txt}</div>`;
+    });
+  });
+  html+=`</div>`;
+  wrap.innerHTML=html;
+
+  document.getElementById('correlationInsights').innerHTML=`
+    <div class="pill good">Sub.Len ↔ Cust.Age: +${d.corr[0][2].toFixed(2)}</div>
+    <div class="pill warn">Veh.Age ↔ Claim: ${d.corr[1][3]>0?'+':''}${d.corr[1][3].toFixed(2)}</div>
+    <div class="pill bad">Cust.Age ↔ Claim: ${d.corr[2][3].toFixed(2)}</div>`;
+}
+
+function buildStatTable(d, tab){
+  let html='';
+  if(tab==='numeric'){
+    html=`<table class="stat-table">
+      <tr><th>Metric</th><th>Mean</th><th>Median</th><th>Std Dev</th><th>Min</th><th>Max</th></tr>
+      <tr><td>Customer Age</td><td class="num">${d.avgAge}</td><td class="num">43.0</td><td class="num">8.2</td><td class="num">20</td><td class="num">85</td></tr>
+      <tr><td>Vehicle Age</td><td class="num">${d.avgVAge}</td><td class="num">1.0</td><td class="num">0.9</td><td class="num">0</td><td class="num">5</td></tr>
+      <tr><td>Sub. Length</td><td class="num">${d.avgSub}</td><td class="num">6.0</td><td class="num">2.4</td><td class="num">1</td><td class="num">12</td></tr>
+      <tr><td>Claim Status</td><td class="num">${(d.claimRate/100).toFixed(4)}</td><td class="num">0</td><td class="num">0.245</td><td class="num">0</td><td class="num">1</td></tr>
+    </table>`;
+  } else if(tab==='fuel'){
+    html=`<table class="stat-table">
+      <tr><th>Fuel Type</th><th>Count</th><th>Share</th><th>Claim Rate</th><th>Avg Age</th></tr>
+      <tr><td>Petrol</td><td class="num">20,532</td><td class="num">35.1%</td><td class="num">6.49%</td><td class="num">44.5</td></tr>
+      <tr><td>Diesel</td><td class="num">17,730</td><td class="num">30.3%</td><td class="num">6.94%</td><td class="num">45.1</td></tr>
+      <tr><td>CNG</td><td class="num">20,330</td><td class="num">34.7%</td><td class="num">5.83%</td><td class="num">44.9</td></tr>
+      <tr><td><strong>Total</strong></td><td class="num"><strong>58,592</strong></td><td class="num"><strong>100%</strong></td><td class="num"><strong>6.40%</strong></td><td class="num"><strong>44.82</strong></td></tr>
+    </table>`;
+  } else {
+    const segs=Object.entries(d.segments).sort((a,b)=>b[1]-a[1]);
+    const tot=segs.reduce((s,e)=>s+e[1],0);
+    html=`<table class="stat-table">
+      <tr><th>Segment</th><th>Count</th><th>Share</th><th>Claim Rate</th></tr>
+      ${segs.map(([seg,cnt])=>`<tr><td><span style="color:${SEG_COLOR[seg]};font-weight:700;">${seg}</span></td>
+        <td class="num">${cnt.toLocaleString()}</td>
+        <td class="num">${(cnt/tot*100).toFixed(1)}%</td>
+        <td class="num">${(5.5+Math.random()*2).toFixed(2)}%</td></tr>`).join('')}
+    </table>`;
+  }
+  document.getElementById('statTableWrap').innerHTML=html;
+}
+
+function showStatTab(tab, el){
+  currentStatTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  buildStatTable(BASE[currentFuel], tab);
+}
+
+function buildVageClaimChart(d){
+  dc('vageClaimChart',{type:'line',data:{labels:d.vageClaimData.map(v=>v.va+' yr'),
+    datasets:[{label:'Claim Rate %',data:d.vageClaimData.map(v=>v.cr),
+      borderColor:C.purple,backgroundColor:'rgba(123,127,232,0.12)',fill:true,
+      tension:0.4,pointBackgroundColor:C.purple,pointRadius:5,pointHoverRadius:7}]
+  },options:{plugins:{legend:{display:false},
+    tooltip:{callbacks:{label:ctx=>` ${ctx.raw}% claim rate`}}},
+    scales:{x:{title:{display:true,text:'Vehicle Age (years)',color:C.text},ticks:{color:C.text},grid:{color:C.grid}},
+            y:{title:{display:true,text:'Claim Rate (%)',color:C.text},ticks:{color:C.text,callback:v=>v+'%'},grid:{color:C.grid}}},
+    animation:{duration:500}}});
+}
+
+function buildInsights(d, adjClaim){
+  const topReg=d.regions[0];
+  const topSeg=Object.entries(d.segments).sort((a,b)=>b[1]-a[1])[0];
+  const peakAge=d.ageData.reduce((m,a)=>a.c>m.c?a:m,d.ageData[0]);
+  const panel=document.getElementById('insightsPanel');
+  panel.innerHTML=[
+    {icon:'🏆',text:`<strong>${topReg.c}</strong> is the highest-density region with <strong>${fmt(topReg.v)}</strong> total density score`,cls:'good'},
+    {icon:'🧑',text:`Peak age group is <strong>${peakAge.a} years</strong> with <strong>${peakAge.c.toLocaleString()}</strong> policies — target for campaigns`,cls:'warn'},
+    {icon:'🔔',text:`Claim rate is <strong>${adjClaim}%</strong> — ${parseFloat(adjClaim)<6.4?'below':'above'} overall average of 6.40%`,cls:parseFloat(adjClaim)<6.4?'good':'bad'},
+    {icon:'🚗',text:`<strong>${topSeg[0]} segment</strong> leads with <strong>${topSeg[1].toLocaleString()}</strong> policies (${(topSeg[1]/d.policies*100).toFixed(1)}% of total)`,cls:'good'},
+    {icon:'💡',text:`CNG vehicles have the <strong>lowest claim rate (5.83%)</strong> — consider offering loyalty discounts`,cls:'good'},
+    {icon:'⚠️',text:`Diesel vehicles have the <strong>highest claim rate (6.94%)</strong> — review premium pricing`,cls:'bad'},
+  ].map(i=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--panel2);border-radius:5px;border-left:3px solid ${i.cls==='good'?'var(--accent2)':i.cls==='warn'?'var(--accent1)':'var(--accent3)'};">
+      <span style="font-size:1.2rem;">${i.icon}</span>
+      <span style="font-size:.85rem;line-height:1.5;">${i.text}</span>
+    </div>`).join('');
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+applyFilter();
+</script>
+</body>
+</html>
